@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "computeruse": {
+      "command": "node",
+      "args": ["dist/index.js"]
+    }
+  }
+}

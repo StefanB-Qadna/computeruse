@@ -1,0 +1,42 @@
+{
+  "name": "computeruse",
+  "version": "0.1.0",
+  "description": "MCP server that gives AI agents vision and control of macOS: screenshots, mouse, keyboard, clipboard, and window management",
+  "type": "module",
+  "bin": {
+    "computeruse": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "swift",
+    "scripts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && node scripts/build-helper.js",
+    "build:helper": "node scripts/build-helper.js",
+    "postinstall": "node scripts/build-helper.js",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "node test/run.mjs",
+    "test:e2e": "node test/e2e-gui.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "computer-use",
+    "macos",
+    "claude",
+    "agent"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0"
+  }
+}

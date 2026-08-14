@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ComputerUse Browser Test</title>
+  <style>
+    body { font-family: sans-serif; margin: 24px; }
+    .spacer { height: 900px; background: linear-gradient(#eee, #ccc); margin: 16px 0; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1 id="heading">ComputerUse Browser Test Page</h1>
+  <p id="welcome">Welcome text for the browser test.</p>
+  <button id="btn" type="button">Click me</button>
+  <span id="count">Count: 0</span>
+  <br><br>
+  <label for="name">Name:</label>
+  <input id="name" type="text" placeholder="enter name">
+  <span id="name-mirror"></span>
+  <br><br>
+  <form id="form">
+    <input id="query" type="text" placeholder="search something">
+    <button id="submit" type="submit">Search</button>
+  </form>
+  <div id="submit-result"></div>
+  <br>
+  <a id="next" href="/second.html">Go to second page</a>
+  <div class="spacer" id="scrolldown"></div>
+  <p id="bottom-marker">You scrolled to the bottom.</p>
+  <script>
+    var count = 0;
+    document.getElementById('btn').addEventListener('click', function () {
+      count += 1;
+      document.getElementById('count').textContent = 'Count: ' + count;
+    });
+    document.getElementById('name').addEventListener('input', function () {
+      document.getElementById('name-mirror').textContent = this.value;
+    });
+    document.getElementById('form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      document.getElementById('submit-result').textContent =
+        'Submitted: ' + document.getElementById('query').value;
+    });
+  </script>
+</body>
+</html>

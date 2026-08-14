@@ -1,5 +1,24 @@
 import { z } from 'zod'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import {
+  browserBack,
+  browserCaptureScreenshot,
+  browserClickByIndex,
+  browserClickBySelector,
+  browserCloseTab,
+  browserForward,
+  browserGetHtml,
+  browserGetText,
+  browserGo,
+  browserKey,
+  browserListTabs,
+  browserNewTab,
+  browserReload,
+  browserScroll,
+  browserSnapshot,
+  browserType,
+  extensionConnected,
+} from './browser.js'
 import { getClipboard, setClipboard } from './clipboard.js'
 import { getInfo, getMousePosition, hotkey, keyPress, mouseClick, mouseDrag, mouseMove, mouseScroll, typeText } from './input.js'
 import { checkPermissions, setupPermissions } from './permissions.js'
@@ -346,6 +365,209 @@ export const tools: ToolDef[] = [
     schema: {},
     handler: async () => {
       return { content: [{ type: 'text', text: 'Abort requested. No long-running actions were in flight. Press Ctrl+C in the terminal to stop the server.' }] }
+    },
+  },
+  {
+    name: 'browser_connect_status',
+    description: 'Check whether the Chrome extension bridge is connected.',
+    schema: {},
+    handler: async () => {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              connected: extensionConnected(),
+              hint: 'Load the extension from the extension/ directory via chrome://extensions (Developer mode > Load unpacked) if it is not connected.',
+            }),
+          },
+        ],
+      }
+    },
+  },
+  {
+    name: 'browser_snapshot',
+    description:
+      'Get the current page state via the Chrome extension: URL, title, viewport, scroll position, and up to 200 visible interactive elements with their index, text, role, bounding rect (viewport coordinates), and a CSS selector. Use the index or selector to click or type.',
+    schema: {
+      tabId: z.number().int().optional().describe('Chrome tab id from browser_list_tabs; defaults to the active tab'),
+    },
+    handler: async (args) => {
+      const result = await browserSnapshot({ tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    },
+  },
+  {
+    name: 'browser_get_text',
+    description: 'Get the visible text content of the page via the Chrome extension (up to 30000 characters).',
+    schema: {
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = (await browserGetText({ tabId: args.tabId as number | undefined })) as { text: string }
+      return { content: [{ type: 'text', text: result.text }] }
+    },
+  },
+  {
+    name: 'browser_get_html',
+    description: 'Get the outerHTML of an element (or the whole body) via the Chrome extension, up to 30000 characters.',
+    schema: {
+      selector: z.string().optional().describe('CSS selector; defaults to the whole body'),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = (await browserGetHtml((args.selector as string) ?? 'body', { tabId: args.tabId as number | undefined })) as { html: string }
+      return { content: [{ type: 'text', text: result.html }] }
+    },
+  },
+  {
+    name: 'browser_click',
+    description:
+      'Click an element via the Chrome extension. Reference it by snapshot index (from the most recent browser_snapshot) or by CSS selector. DOM-level clicking does not move the mouse.',
+    schema: {
+      index: z.number().int().optional().describe('Element index from the most recent browser_snapshot'),
+      selector: z.string().optional().describe('CSS selector, e.g. "#login-button" or "button.primary"'),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const tabParams = { tabId: args.tabId as number | undefined }
+      const result =
+        args.index !== undefined
+          ? await browserClickByIndex(args.index as number, tabParams)
+          : await browserClickBySelector(args.selector as string, tabParams)
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_type',
+    description: 'Type text into an input, textarea, or contenteditable element via the Chrome extension. Sets the value through the native setter and fires input/change events so reactive frameworks notice.',
+    schema: {
+      selector: z.string().describe('CSS selector of the field'),
+      text: z.string(),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = await browserType(args.selector as string, args.text as string, { tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_key',
+    description: 'Dispatch a keyboard event to an element (or the focused element) via the Chrome extension. Enter on a form input also submits the form.',
+    schema: {
+      key: z.string().describe('Key name, e.g. "Enter", "Escape", "ArrowDown", "a"'),
+      modifiers: z.array(z.enum(['ctrl', 'cmd', 'shift', 'alt'])).default([]),
+      selector: z.string().optional().describe('CSS selector of the target element; defaults to the focused element'),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = await browserKey(args.key as string, (args.modifiers as string[]) ?? [], args.selector as string | undefined, {
+        tabId: args.tabId as number | undefined,
+      })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_scroll',
+    description: 'Scroll the page or an element via the Chrome extension.',
+    schema: {
+      dx: z.number().default(0),
+      dy: z.number().default(0).describe('Negative scrolls down'),
+      selector: z.string().optional().describe('Scroll this element instead of the page'),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = await browserScroll(args.dx as number, args.dy as number, args.selector as string | undefined, {
+        tabId: args.tabId as number | undefined,
+      })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_go',
+    description: 'Navigate a tab to a URL via the Chrome extension.',
+    schema: {
+      url: z.string(),
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = await browserGo(args.url as string, { tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_back',
+    description: 'Go back in a tab via the Chrome extension.',
+    schema: { tabId: z.number().int().optional() },
+    handler: async (args) => {
+      const result = await browserBack({ tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_forward',
+    description: 'Go forward in a tab via the Chrome extension.',
+    schema: { tabId: z.number().int().optional() },
+    handler: async (args) => {
+      const result = await browserForward({ tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_reload',
+    description: 'Reload a tab via the Chrome extension.',
+    schema: { tabId: z.number().int().optional() },
+    handler: async (args) => {
+      const result = await browserReload({ tabId: args.tabId as number | undefined })
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_new_tab',
+    description: 'Open a new tab via the Chrome extension.',
+    schema: {
+      url: z.string().optional().describe('URL to load; defaults to about:blank'),
+    },
+    handler: async (args) => {
+      const result = await browserNewTab(args.url as string | undefined)
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_close_tab',
+    description: 'Close a tab by id via the Chrome extension.',
+    schema: {
+      tabId: z.number().int(),
+    },
+    handler: async (args) => {
+      const result = await browserCloseTab(args.tabId as number)
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+    },
+  },
+  {
+    name: 'browser_list_tabs',
+    description: 'List all open Chrome tabs via the Chrome extension.',
+    schema: {},
+    handler: async () => {
+      const result = await browserListTabs()
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    },
+  },
+  {
+    name: 'browser_screenshot',
+    description: 'Capture the visible area of a Chrome tab as a PNG via the Chrome extension. The image is at device pixel ratio; use the OS-level screenshot tool instead when you need exact screen coordinates.',
+    schema: {
+      tabId: z.number().int().optional(),
+    },
+    handler: async (args) => {
+      const result = (await browserCaptureScreenshot({ tabId: args.tabId as number | undefined })) as { dataUrl: string }
+      const data = result.dataUrl.replace(/^data:image\/png;base64,/, '')
+      return {
+        content: [
+          { type: 'text', text: 'Chrome tab screenshot captured.' },
+          { type: 'image', data, mimeType: 'image/png' },
+        ],
+      }
     },
   },
 ]

@@ -75,6 +75,7 @@ Point them at `node /absolute/path/to/computeruse/dist/index.js` (stdio transpor
 | `open_app`, `list_windows`, `get_active_window`, `focus_window`, `resize_window`, `close_window` | App and window management |
 | `check_permissions`, `setup_permissions` | Permission status and setup |
 | `abort` | Stop current activity |
+| `browser_*` | Chrome DOM-level control (see Chrome extension section) |
 
 ## Coordinates
 
@@ -83,6 +84,19 @@ Models receive screenshots resized by the API, so pixel coordinates the model es
 - `screenshot` scales the image so its long edge is at most 1568px (the model's standard vision limit, overridable with `COMPUTERUSE_MAX_IMAGE_EDGE`). The model sees exactly the pixels it computes coordinates on.
 - Every coordinate-based tool (`mouse_move`, `mouse_click`, `mouse_drag`, `mouse_scroll`, `get_mouse_position`, `get_screen_info`, `list_windows`, `get_active_window`, `resize_window`) works in the pixel space of the most recent screenshot and converts to real screen coordinates internally.
 - If no screenshot has been taken yet, coordinates map 1:1 to the screen.
+
+## Chrome extension (browser tools)
+
+The mouse/keyboard tools are coarse inside web pages. The bundled Chrome extension lets agents read and interact with webpages at the DOM level:
+
+1. Open `chrome://extensions`, enable Developer mode, click **Load unpacked**, select the `extension/` directory.
+2. Keep Chrome open. The extension connects to the MCP server over `ws://127.0.0.1:<port>` (default `17647`, overridable with `COMPUTERUSE_BROWSER_PORT`; the extension's port is set in `extension/port.js`).
+
+Browser tools: `browser_snapshot` (interactive elements with selectors and rects), `browser_get_text`, `browser_get_html`, `browser_click` (by snapshot index or CSS selector), `browser_type`, `browser_key`, `browser_scroll`, `browser_go`, `browser_back`, `browser_forward`, `browser_reload`, `browser_new_tab`, `browser_close_tab`, `browser_list_tabs`, `browser_screenshot`, `browser_connect_status`.
+
+Guidance for agents: use `browser_*` tools for anything inside webpages; use the OS-level tools (`screenshot`, `mouse_*`, `key_press`, `type_text`) for desktop apps and anything outside the browser.
+
+Note: the WebSocket bridge binds to 127.0.0.1 only, but any local process can connect to it. Treat local processes as your trust boundary.
 
 ## Safety
 
@@ -97,7 +111,11 @@ Models receive screenshots resized by the API, so pixel coordinates the model es
 npm run build        # tsc + compile the Swift input helper
 npm run typecheck
 node test/run.mjs    # end-to-end MCP test suite (needs permissions for input/screenshot tests)
+npm run test:e2e     # OS-level GUI control test (TextEdit)
+npm run test:browser # browser bridge test with a real Chrome instance
 ```
+
+The browser test launches a disposable Chrome profile from the cached Playwright Chrome for Testing binary (Google Chrome 137+ removed `--load-extension`, so branded Chrome can't be used for the automated test; loading the extension manually in your normal Chrome still works).
 
 The Swift helper (`swift/main.swift`, compiled to `bin/macos-input`) uses CoreGraphics `CGEvent` for input and ScreenCaptureKit for capture, compositing all displays into one image at 1 point = 1 pixel so agent coordinates always match screenshot pixels.
 
@@ -113,5 +131,7 @@ src/input.ts            mouse/keyboard via helper, paste-based typing
 src/clipboard.ts        pbcopy / pbpaste
 src/windows.ts          osascript System Events
 src/permissions.ts      AX / Screen Recording checks
+src/browser.ts          WebSocket bridge to the Chrome extension
 bin/macos-input         compiled Swift CGEvent + ScreenCaptureKit helper
+extension/              Chrome MV3 extension (background WS client + content-script DOM ops)
 ```

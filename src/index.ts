@@ -1,6 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { startBrowserBridge } from './browser.js'
 import { tools } from './tools.js'
+
+startBrowserBridge()
 
 const server = new McpServer({
   name: 'computeruse',

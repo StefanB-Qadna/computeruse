@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ComputerUse Browser Bridge",
+  "version": "0.1.0",
+  "description": "Lets the computeruse MCP server read and interact with webpages at the DOM level",
+  "minimum_chrome_version": "116",
+  "permissions": ["tabs", "scripting", "activeTab", "alarms", "storage"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1/*", "http://localhost/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; connect-src ws://127.0.0.1:* http://127.0.0.1:* http://localhost:*"
+  }
+}

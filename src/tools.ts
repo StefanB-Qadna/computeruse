@@ -17,7 +17,7 @@ import {
   browserScroll,
   browserSnapshot,
   browserType,
-  extensionConnected,
+  waitForExtension,
 } from './browser.js'
 import { getClipboard, setClipboard } from './clipboard.js'
 import { getInfo, getMousePosition, hotkey, keyPress, mouseClick, mouseDrag, mouseMove, mouseScroll, typeText } from './input.js'
@@ -369,16 +369,20 @@ export const tools: ToolDef[] = [
   },
   {
     name: 'browser_connect_status',
-    description: 'Check whether the Chrome extension bridge is connected.',
+    description:
+      'Check whether the Chrome extension bridge is connected. Waits briefly because Chrome suspends the extension service worker when idle and it needs a moment to wake and reconnect.',
     schema: {},
     handler: async () => {
+      const connected = await waitForExtension(10000)
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
-              connected: extensionConnected(),
-              hint: 'Load the extension from the extension/ directory via chrome://extensions (Developer mode > Load unpacked) if it is not connected.',
+              connected,
+              hint: connected
+                ? 'The Chrome extension is connected.'
+                : 'The Chrome extension is not connected. It retries every second and wakes from Chrome suspension within ~30s, so calling this again often succeeds. If it never connects: reload it via chrome://extensions (Developer mode > Load unpacked > reload the ComputerUse Browser Bridge card) and check that an agent session is running, since the bridge only exists while the MCP server process is alive.',
             }),
           },
         ],

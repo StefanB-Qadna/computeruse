@@ -1,1 +1,2 @@
 var BRIDGE_PORT = 17647;
+var BRIDGE_AUTH = '';

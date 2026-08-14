@@ -7,8 +7,14 @@ function connect() {
   try {
     ws = new WebSocket('ws://127.0.0.1:' + BRIDGE_PORT);
   } catch (err) {
+    setTimeout(connect, 1000);
     return;
   }
+  ws.onopen = () => {
+    try {
+      ws.send(JSON.stringify({ auth: BRIDGE_AUTH }));
+    } catch (err) {}
+  };
   ws.onmessage = (event) => {
     let msg;
     try {

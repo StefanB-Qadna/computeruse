@@ -8,9 +8,10 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const fixtures = path.join(root, 'test', 'fixtures')
 const BRIDGE_PORT = 17648
+const BRIDGE_AUTH = `test-token-${Date.now()}`
 const extensionDir = path.join(os.tmpdir(), `computeruse-ext-${Date.now()}`)
 cpSync(path.join(root, 'extension'), extensionDir, { recursive: true })
-writeFileSync(path.join(extensionDir, 'port.js'), `var BRIDGE_PORT = ${BRIDGE_PORT};\n`)
+writeFileSync(path.join(extensionDir, 'port.js'), `var BRIDGE_PORT = ${BRIDGE_PORT};\nvar BRIDGE_AUTH = '${BRIDGE_AUTH}';\n`)
 const HTTP_PORT = 8899
 
 const CANDIDATE_BROWSERS = [
@@ -48,7 +49,7 @@ class McpClient {
   constructor() {
     this.proc = spawn('node', [path.join(root, 'dist', 'index.js')], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, COMPUTERUSE_BROWSER_PORT: String(BRIDGE_PORT) },
+      env: { ...process.env, COMPUTERUSE_BROWSER_PORT: String(BRIDGE_PORT), COMPUTERUSE_BROWSER_TOKEN: BRIDGE_AUTH },
     })
     this.nextId = 1
     this.pending = new Map()

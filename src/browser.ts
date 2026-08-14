@@ -2,6 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 
 const DEFAULT_PORT = 17647
 const PORT = Number(process.env.COMPUTERUSE_BROWSER_PORT ?? DEFAULT_PORT)
+const EXPECTED_AUTH = process.env.COMPUTERUSE_BROWSER_TOKEN ?? ''
 
 let wss: WebSocketServer | null = null
 let extension: WebSocket | null = null
@@ -21,13 +22,31 @@ export function startBrowserBridge(): void {
     console.error(`browser bridge failed to listen on 127.0.0.1:${PORT}: ${err.message}`)
   })
   wss.on('connection', (socket) => {
-    extension?.close()
-    extension = socket
+    let authed = false
+    const rejectUnauthed = () => {
+      if (!authed) socket.close()
+    }
+    const authTimer = setTimeout(rejectUnauthed, 3000)
     socket.on('message', (data) => {
-      let msg: { id?: number; result?: unknown; error?: string }
+      let msg: { auth?: string; id?: number; result?: unknown; error?: string }
       try {
         msg = JSON.parse(String(data))
       } catch {
+        return
+      }
+      if (!authed) {
+        if (typeof msg.auth !== 'string') {
+          socket.close()
+          return
+        }
+        if (EXPECTED_AUTH && msg.auth !== EXPECTED_AUTH) {
+          socket.close()
+          return
+        }
+        authed = true
+        clearTimeout(authTimer)
+        extension?.close()
+        extension = socket
         return
       }
       if (msg.id !== undefined && pending.has(msg.id)) {
@@ -39,6 +58,7 @@ export function startBrowserBridge(): void {
       }
     })
     socket.on('close', () => {
+      clearTimeout(authTimer)
       if (extension === socket) extension = null
     })
     socket.on('error', () => {})
@@ -47,6 +67,15 @@ export function startBrowserBridge(): void {
 
 export function extensionConnected(): boolean {
   return extension !== null && extension.readyState === WebSocket.OPEN
+}
+
+export async function waitForExtension(maxMs: number): Promise<boolean> {
+  const deadline = Date.now() + maxMs
+  while (Date.now() < deadline) {
+    if (extensionConnected()) return true
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  return extensionConnected()
 }
 
 export function browserCall(method: string, params: Record<string, unknown> = {}, timeoutMs = 10000): Promise<unknown> {

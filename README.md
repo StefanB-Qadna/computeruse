@@ -98,6 +98,8 @@ Guidance for agents: use `browser_*` tools for anything inside webpages; use the
 
 Note: the WebSocket bridge binds to 127.0.0.1 only, but any local process can connect to it. Treat local processes as your trust boundary.
 
+A `WebSocket connection to 'ws://127.0.0.1:<port>' failed: ERR_CONNECTION_REFUSED` message in the extension's console is normal whenever no agent session is running — the bridge only exists while the MCP server process is alive. The extension retries every second and connects automatically when Claude Code or another client starts.
+
 ## Safety
 
 - Claude Code and Codex CLI prompt for approval on every tool call. Do not allowlist these tools globally.

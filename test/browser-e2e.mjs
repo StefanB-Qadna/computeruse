@@ -1,13 +1,16 @@
 import { createServer } from 'node:http'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { execFileSync, spawn } from 'node:child_process'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const fixtures = path.join(root, 'test', 'fixtures')
-const extensionDir = path.join(root, 'extension')
 const BRIDGE_PORT = 17648
+const extensionDir = path.join(os.tmpdir(), `computeruse-ext-${Date.now()}`)
+cpSync(path.join(root, 'extension'), extensionDir, { recursive: true })
+writeFileSync(path.join(extensionDir, 'port.js'), `var BRIDGE_PORT = ${BRIDGE_PORT};\n`)
 const HTTP_PORT = 8899
 
 const CANDIDATE_BROWSERS = [
@@ -108,8 +111,6 @@ const step = (name, ok, detail = '') => {
   if (!ok) failures++
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
 }
-
-writeFileSync(path.join(extensionDir, 'port.js'), `var BRIDGE_PORT = ${BRIDGE_PORT};\n`)
 
 try {
   execFileSync('pkill', ['-f', '/tmp/computeruse-cft-test'], { stdio: 'ignore' })
@@ -277,6 +278,7 @@ client.close()
 server.close()
 try {
   execFileSync('rm', ['-rf', profileDir], { stdio: 'ignore' })
+  rmSync(extensionDir, { recursive: true, force: true })
 } catch {}
 
 console.log(`\n${checks.length - failures} passed, ${failures} failed`)
